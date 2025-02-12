@@ -3,7 +3,7 @@ name: Deploy FastAPI to GCP
 on:
   push:
     branches:
-      - feat/get-book-by-id
+      - https://github.com/victormayowa/fastapi-book-project/tree/feat/get-book-by-id
 
 jobs:
   deploy:

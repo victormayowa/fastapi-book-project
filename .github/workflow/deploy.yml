@@ -3,7 +3,7 @@ name: Deploy FastAPI to GCP
 on:
   push:
     branches:
-      - main
+      - feat/get-book-by-id
 
 jobs:
   deploy:

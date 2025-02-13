@@ -2,11 +2,13 @@ name: Deploy to GCP Compute Engine
 
 on:
   push:
-    branches: [main]
+    branches: [main]  # Runs when code is pushed to the main branch
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -16,16 +18,20 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Build and Push Docker Image
+      - name: Configure Docker to Use GCP
         run: |
           gcloud auth configure-docker
+
+      - name: Build and Push Docker Image to GCR
+        run: |
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app .
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app
 
-      - name: Deploy to Compute Engine
+      - name: Deploy to Compute Engine via SSH
         run: |
-          gcloud compute ssh my-instance --zone us-central1-a --command "
-          docker pull gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app &&
-          docker stop fastapi-container || true &&
-          docker run -d -p 8000:8000 --name fastapi-container gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app
+          gcloud compute ssh ${{ secrets.GCP_VM_NAME }} --zone=${{ secrets.GCP_ZONE }} --command "
+          sudo docker pull gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app &&
+          sudo docker stop fastapi-container || true &&
+          sudo docker rm fastapi-container || true &&
+          sudo docker run -d -p 8000:8000 --name fastapi-container gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app
           "

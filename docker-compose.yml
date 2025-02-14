@@ -1,34 +1,22 @@
-name: Deploy FastAPI
+version: '3.9'
 
-on:
-  push:
-    branches:
-      - main
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    restart: always
+    ports:
+      - "8000:8000"
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Deploy to Ubuntu Server with Appleboy SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            echo "Connecting to server..."
-            cd /home/${{ secrets.SSH_USERNAME }}/fastapi-book-project || { echo "Change directory failed"; exit 1; }
-            echo "Pulling latest code..."
-            git pull origin main || { echo "Git pull failed"; exit 1; }
-            echo "Bringing down Docker containers..."
-            sudo docker-compose down || { echo "Docker compose down failed"; exit 1; }
-            echo "Rebuilding Docker containers..."
-            sudo docker-compose up --build -d || { echo "Docker compose up failed"; exit 1; }
-            echo "FastAPI Book Project deployed successfully"
-
-
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - fastapi

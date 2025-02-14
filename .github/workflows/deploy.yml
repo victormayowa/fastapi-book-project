@@ -1,37 +1,28 @@
-name: Deploy to GCP Compute Engine
+name: Deploy FastAPI
 
 on:
   push:
-    branches: [main]  # Runs when code is pushed to the main branch
-  workflow_dispatch:  # Allows manual triggering
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Deploy to Ubuntu Server with Appleboy SSH
+        uses: appleboy/ssh-action@master
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-
-      - name: Configure Docker to Use GCP
-        run: |
-          gcloud auth configure-docker
-
-      - name: Build and Push Docker Image to GCR
-        run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app .
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app
-
-      - name: Deploy to Compute Engine via SSH
-        run: |
-          gcloud compute ssh ${{ secrets.GCP_VM_NAME }} --zone=${{ secrets.GCP_ZONE }} --command "
-          sudo docker pull gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app &&
-          sudo docker stop fastapi-container || true &&
-          sudo docker rm fastapi-container || true &&
-          sudo docker run -d -p 8000:8000 --name fastapi-container gcr.io/${{ secrets.GCP_PROJECT_ID }}/fastapi-app
-          "
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/${{ secrets.SSH_USERNAME }}/fastapi-book-project || {echo "change directory failed"; exit 1;}
+            git pull origin main || { echo "git pull failed"; exit 1;}
+            docker-compose down -v || {echo "compose failed"; exit 1;}
+            docker-compose up --build -d  || { echo "build failed"; exit 1;}
+            echo "FastAPI Book Project deployed successfully"

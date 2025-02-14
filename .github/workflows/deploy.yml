@@ -32,5 +32,3 @@ jobs:
             echo "Rebuilding Docker containers..."
             sudo docker-compose up --build -d || { echo "Docker compose up failed"; exit 1; }
             echo "FastAPI Book Project deployed successfully"
-
-
